@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
+from itertools import permutations
+from collections import defaultdict
+
 
 # Enable development mode
 DEV_MODE = True  # Set to False when deploying
@@ -40,6 +43,70 @@ def load_default_files():
 def beta_inv(p, alpha, beta):
     return np.random.beta(alpha, beta)
 
+def risk_combinations(risk_data):
+    # Extract the 'id' column as a list
+    ids = risk_data['riskId'].tolist()
+
+    seen = set()
+    raw_combinations = []
+
+    for start_index, anchor in enumerate(ids):
+        rest = ids[:start_index] + ids[start_index + 1:]
+
+        for r in range(0, len(rest) + 1):
+            for perm in permutations(rest, r):
+                combo = (anchor,) + perm
+                key = frozenset(combo)
+                if key not in seen:
+                    seen.add(key)
+                    raw_combinations.append((start_index, combo))
+
+    # Now sort by:
+    # 1. anchor index (to keep R1, R2, R3... order)
+    # 2. combo length (shorter combos first)
+    # 3. actual tuple (to break ties lexicographically)
+    sorted_combinations = sorted(
+        raw_combinations,
+        key=lambda x: (x[0], len(x[1]), x[1])
+    )
+        
+    print("booooo")
+    return sorted_combinations;
+
+def group_risks(risk_data):
+    # Build risk appearance order
+    risk_order = {risk_id: idx for idx, risk_id in enumerate(risk_data['riskId'])}
+
+    # Group activities to risk IDs
+    activity_to_risks = defaultdict(list)
+
+    for _, row in risk_data.iterrows():
+        for act in row['affectedActivity'].split(','):
+            act = act.strip()
+            if act and row['riskId'] not in activity_to_risks[act]:
+                activity_to_risks[act].append(row['riskId'])
+
+    # Group by risk combinations (as tuples) → list of activities
+    risks_to_activities = defaultdict(list)
+    for activity, risks in activity_to_risks.items():
+        key = tuple(risks)  # preserve order
+        risks_to_activities[key].append(activity)
+
+    # Sort by lexicographical risk appearance order
+    sorted_groups = sorted(
+        risks_to_activities.items(),
+        key=lambda x: [risk_order[r] for r in x[0]]
+    )
+
+    # Format result: list of tuples (activity_group_str, risks)
+    result = []
+    for risks, activities in sorted_groups:
+        act_group = ','.join(sorted(activities, key=int))
+        result.append((act_group, list(risks)))
+
+    return result
+
+
 # Function to run the simulation
 def run_simulation():
     global baseline_data, risk_data  # Access global variables
@@ -52,6 +119,44 @@ def run_simulation():
     total_baseline_duration = baseline_data['originalDuration'].sum()  # Total project duration
     results = []  # List to store simulation results
     total_iterations = 1000  # Number of simulation runs
+    
+    risk_combos = risk_combinations(risk_data=risk_data)
+    
+    # Print only the combos
+    for _, combo in risk_combos:
+        print(combo)
+        
+        
+    print("\n\n\nactivitymapping\n")
+        
+    risk_groups =  group_risks(risk_data=risk_data)
+    
+    print(risk_groups)
+    
+    for activities, risks in risk_groups:
+        print(risks,"\n")
+        
+        # Run Monte Carlo simulation
+        for _ in range(total_iterations):
+            rand_no = np.random.rand()  # Generate a random number between 0 and 1
+            for activity in activities.split(","):
+                print(activity)
+                print("activity:",activity)
+                # Find the affected activity in the baseline data
+                affected_activity = baseline_data.loc[
+                    baseline_data['activityId'] == int(activity)
+                ]            
+            
+                # Skip if the affected activity is not found
+                if affected_activity.empty:
+                    continue
+            
+                original_duration = affected_activity.iloc[0]['originalDuration']  # Get original duration
+                print("OG Duration: ",original_duration,"\n")
+                
+        
+
+    
     
     # Iterate through each risk in the risk data
     for _, risk in risk_data.iterrows():
