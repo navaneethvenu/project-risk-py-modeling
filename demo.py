@@ -3,36 +3,9 @@ import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
 
-# Enable development mode
-DEV_MODE = True  # Set to False when deploying
+from file_load import DEV_MODE, load_csv, load_default_files
+import tornado_chart;
 
-
-# Default file paths (update these with your actual file locations)
-DEFAULT_BASELINE_FILE = "/Users/navaneethvenu/Downloads/Dad Project Risk - Activities.csv"
-DEFAULT_RISK_FILE = "/Users/navaneethvenu/Downloads/Dad Project Risk - Risk.csv"
-
-# Function to load CSV data
-# This function opens a file dialog to select a CSV file
-# and loads it into a pandas DataFrame.
-def load_csv(label, default_file=None):
-    """Opens a file dialog to select a CSV file or loads a default file in development mode."""
-    if DEV_MODE and default_file:  # Load default file in dev mode
-        label.config(text=f"Loaded (Default): {default_file.split('/')[-1]}")
-        return pd.read_csv(default_file)
-    
-    file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-    if file_path:
-        label.config(text=f"Loaded: {file_path.split('/')[-1]}")  # Update label text
-        return pd.read_csv(file_path)  # Read CSV file into DataFrame
-    return None  # Return None if no file is selected
-
-
-# Function to load default files for development mode
-def load_default_files():
-    """Loads default CSV files if running in development mode."""
-    global baseline_data, risk_data
-    baseline_data = load_csv(lbl_baseline, DEFAULT_BASELINE_FILE)
-    risk_data = load_csv(lbl_risk, DEFAULT_RISK_FILE)
 
 # Function to simulate a Beta Inverse transformation
 # This function generates a random number from the Beta distribution
@@ -140,6 +113,56 @@ def run_simulation():
     aggregated.to_csv("simulation_new_summary.csv", index=False)
     print("Updated Summary statistics saved to simulation_new_summary.csv")
     
+    # data for chart
+    labels = np.char.array([
+        "Variable 1\n 1.0 - 5.0",
+        "Variable 2\n 11% - 15%",
+        "Variable 3\n $200 - $300",
+        "Variable 4\n $12 - $14",
+        "Variable 5\n Off - On",
+        "Variable 6\n Low - High",
+    ])
+
+    midpoint = 20
+
+    # data values
+    low_values = np.array([ # value order corresponds to label order
+        19.5,
+        18,
+        15.5,
+        12,
+        32.5,
+        4 
+    ])
+
+    high_values = np.array([
+        20.5,
+        22,
+        24.5,
+        28,
+        7.5,
+        36
+    ])
+
+    var_effect = np.abs(high_values - low_values)/midpoint
+
+    data = pd.DataFrame({'Labels': labels,
+                        'Low values': low_values,
+                        'High values': high_values,
+                        'Variable effect' : var_effect
+                        })
+
+    # sorts effect high to low (adjust to preference)
+    data = data.sort_values(
+        'Variable effect',
+        ascending=True,
+        inplace=False,
+        ignore_index=False,
+        key=None
+    )
+    
+    tornado_chart.tornado_chart(data,labels, midpoint, data['Low values'], data['High values'])
+        
 
 
 # Initialize global variables
@@ -155,11 +178,11 @@ frame.pack(pady=20)
 
 # Button to load baseline data
 btn_load_baseline = tk.Button(frame, text="Load Baseline Data", 
-                              command=lambda: globals().update(baseline_data=load_csv(lbl_baseline)))
+                              command=lambda: globals().update(baseline_data=load_csv(lbl_baseline,pd, filedialog)))
 
 # Button to load risk data
 btn_load_risk = tk.Button(frame, text="Load Risk Data", 
-                          command=lambda: globals().update(risk_data=load_csv(lbl_risk)))
+                          command=lambda: globals().update(risk_data=load_csv(lbl_risk,pd, filedialog)))
 
 # Button to run the simulation
 btn_run = tk.Button(root, text="Run Simulation", command=run_simulation)
@@ -179,7 +202,7 @@ btn_run.pack(pady=20)
 
 # Automatically load default files in development mode
 if DEV_MODE:
-    load_default_files()
+    load_default_files(lbl_baseline,lbl_risk, pd, filedialog)
     run_simulation()
 
 # Start Tkinter event loop
