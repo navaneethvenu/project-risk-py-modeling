@@ -28,3 +28,4 @@ def load_default_files(lbl_baseline,lbl_risk, pd, filedialog):
     global baseline_data, risk_data
     baseline_data = load_csv(lbl_baseline, pd, filedialog, DEFAULT_BASELINE_FILE)
     risk_data = load_csv(lbl_risk, pd, filedialog, DEFAULT_RISK_FILE)
+    return {"baseline":baseline_data, "risk":risk_data}

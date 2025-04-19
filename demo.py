@@ -4,7 +4,9 @@ import tkinter as tk
 from tkinter import filedialog
 
 from file_load import DEV_MODE, load_csv, load_default_files
-import tornado_chart;
+from tornado_chart import tornado_chart
+
+global baseline_data, risk_data
 
 
 # Function to simulate a Beta Inverse transformation
@@ -113,9 +115,14 @@ def run_simulation():
     aggregated.to_csv("simulation_new_summary.csv", index=False)
     print("Updated Summary statistics saved to simulation_new_summary.csv")
     
+    load_chart()
+    
+    
+def load_chart():
+    print("loading chart")
     # data for chart
     labels = np.char.array([
-        "Variable 1\n 1.0 - 5.0",
+        "Variable 1\n 2.0 - 5.0",
         "Variable 2\n 11% - 15%",
         "Variable 3\n $200 - $300",
         "Variable 4\n $12 - $14",
@@ -161,7 +168,7 @@ def run_simulation():
         key=None
     )
     
-    tornado_chart.tornado_chart(data,labels, midpoint, data['Low values'], data['High values'])
+    tornado_chart(data,labels, midpoint, data['Low values'], data['High values'])
         
 
 
@@ -202,7 +209,9 @@ btn_run.pack(pady=20)
 
 # Automatically load default files in development mode
 if DEV_MODE:
-    load_default_files(lbl_baseline,lbl_risk, pd, filedialog)
+    resultFiles=load_default_files(lbl_baseline,lbl_risk, pd, filedialog)
+    baseline_data = resultFiles["baseline"]
+    risk_data = resultFiles["risk"]
     run_simulation()
 
 # Start Tkinter event loop
