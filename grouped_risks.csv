@@ -1,0 +1,6 @@
+riskId,affectedActivity,minimum,maximum,alpha,beta
+R1,"1,2",52,152,2,2
+R2,2,26,44,2,5
+R3,"3.3,3.4,4",5,32,3,4
+R4,3.2,15,26,2,4
+R5,"3.9,4",4,18,2,5

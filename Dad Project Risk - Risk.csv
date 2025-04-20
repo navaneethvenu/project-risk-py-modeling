@@ -1,0 +1,6 @@
+riskId,title,affectedActivity,probability,timeImpact,alpha,beta,riskMitigationCost,contigencyCost
+R1,Design Changes and Authority Delays,"1,2",0.68,0.58,2,2,4189.95,315099.64
+R2,Manpower Shortage (Authority),2,0.42,0.46,2,5,2618.72,105033.21
+R3,Material Shortage,"3.3,3.4,4",0.46,0.39,3,4,11615.92,210066.43
+R4,Equipment Delay,3.2,0.22,0.68,2,4,9868.06,63019.93
+R5,Weather Delays,"3.9,4",0.6,0.25,2,5,5446.94,42013.29
