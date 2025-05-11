@@ -34,6 +34,6 @@ def tornado_chart_centered(labels, values, title="Tornado Diagram"):
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.grid(axis="x", linestyle="--", alpha=0.4)
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
     return

@@ -1,10 +1,10 @@
-riskId,title,affectedActivity,probability,timeImpact,originalDuration,avgTimeImpact,o,m,p,avg,alpha,beta
-R1,Design Changes and Authority Delays,1,0.68,0.58,255.0,101,91,101,152,114,2,2
-R1,Design Changes and Authority Delays,2,0.68,0.58,148.0,58,52,58,87,66,2,2
-R2,Manpower Shortage (Authority),2,0.42,0.46,148.0,29,26,29,44,33,2,5
-R3,Material Shortage,3.3,0.46,0.39,102.0,18,16,18,27,20,3,4
-R3,Material Shortage,3.4,0.46,0.39,115.0,21,19,21,32,24,3,4
-R3,Material Shortage,4,0.46,0.39,32.0,6,5,6,9,7,3,4
-R4,Equipment Delay,3.2,0.22,0.68,113.0,17,15,17,26,19,2,4
-R5,Weather Delays,3.9,0.6,0.25,79.0,12,11,12,18,14,2,5
-R5,Weather Delays,4,0.6,0.25,32.0,5,4,5,8,6,2,5
+riskId,title,affectedActivity,probability,timeImpact,originalDuration,avgTimeImpact,o,m,p,avg,alpha,beta,riskMitigationCost,contigencyCost
+R1,Design Changes and Authority Delays,1,0.68,0.58,255.0,101,91,101,152,114,2,2,4189.95,315099.64
+R1,Design Changes and Authority Delays,2,0.68,0.58,148.0,58,52,58,87,66,2,2,4189.95,315099.64
+R2,Manpower Shortage (Authority),2,0.42,0.46,148.0,29,26,29,44,33,2,5,2618.72,105033.21
+R3,Material Shortage,3.3,0.46,0.39,102.0,18,16,18,27,20,3,4,11615.92,210066.43
+R3,Material Shortage,3.4,0.46,0.39,115.0,21,19,21,32,24,3,4,11615.92,210066.43
+R3,Material Shortage,4,0.46,0.39,32.0,6,5,6,9,7,3,4,11615.92,210066.43
+R4,Equipment Delay,3.2,0.22,0.68,113.0,17,15,17,26,19,2,4,9868.06,63019.93
+R5,Weather Delays,3.9,0.6,0.25,79.0,12,11,12,18,14,2,5,5446.94,42013.29
+R5,Weather Delays,4,0.6,0.25,32.0,5,4,5,8,6,2,5,5446.94,42013.29

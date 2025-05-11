@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
+import matplotlib.pyplot as plt
+from pulp import *
 
 from file_load import DEV_MODE, load_csv, load_default_files
 from tornado_chart import tornado_chart_centered
-from globals import original_set_duration
+from globals import original_set_duration, total_contigency_cost
 
 global baseline_data, risk_data
 
@@ -30,7 +32,7 @@ def run_simulation():
         "originalDuration"
     ].sum()  # Total project duration
     results = []  # List to store simulation results
-    total_iterations = 1000  # Number of simulation runs
+    total_iterations = 2000  # Number of simulation runs
     individual_risks = []
 
     # Iterate through each risk in the risk data
@@ -89,6 +91,8 @@ def run_simulation():
                     "avg": round((3.4 * avgTimeImpact) / 3),
                     "alpha": risk["alpha"],
                     "beta": risk["beta"],
+                    "riskMitigationCost": risk["riskMitigationCost"],
+                    "contigencyCost": risk["contigencyCost"],
                 }
             )
 
@@ -98,7 +102,18 @@ def run_simulation():
     print("Simulation complete. Individual Risks saved to individual_risks.csv")
 
     df_grouped_risk = (
-        df_separate_risk[["riskId", "affectedActivity", "o", "p", "alpha", "beta"]]
+        df_separate_risk[
+            [
+                "riskId",
+                "affectedActivity",
+                "o",
+                "p",
+                "alpha",
+                "beta",
+                "riskMitigationCost",
+                "contigencyCost",
+            ]
+        ]
         .groupby("riskId")
         .agg(
             {
@@ -107,6 +122,8 @@ def run_simulation():
                 "p": "max",
                 "alpha": "first",
                 "beta": "first",
+                "riskMitigationCost": "first",
+                "contigencyCost": "first",
             }
         )
         .reset_index()
@@ -116,7 +133,7 @@ def run_simulation():
 
     # Convert seperated risks to DataFrame and save to CSV
     df_grouped_risk.to_csv("grouped_risks.csv", index=False)
-    print("Simulation complete. Individual Risks saved to individual_risks.csv")
+    print("Simulation complete. Grouped Risks saved to grouped_risks.csv")
 
     for _, grisk in df_grouped_risk.iterrows():
 
@@ -143,8 +160,9 @@ def run_simulation():
                     "riskId": grisk["riskId"],
                     "activityId": grisk["affectedActivity"],
                     "simulatedDuration": simulated_duration,
-                    "simulatedDurationDivident": simulated_duration_divident,
                     "totalSimulatedDuration": total_simulated_duration,
+                    "riskMitigationCost": grisk["riskMitigationCost"],
+                    "contigencyCost": grisk["contigencyCost"],
                 }
             )
 
@@ -164,6 +182,8 @@ def run_simulation():
             mean_total_simulated=("totalSimulatedDuration", "mean"),
             sd_total_simulated=("totalSimulatedDuration", "std"),
             var_total_simulated=("totalSimulatedDuration", "var"),
+            riskMitigationCost=("riskMitigationCost", "first"),
+            contigencyCost=("contigencyCost", "first"),
         )
         .reset_index()
     )
@@ -176,7 +196,105 @@ def run_simulation():
     df_summary.to_csv("simulation_summary.csv", index=False)
     print("Summary statistics saved to simulation_summary.csv")
 
+    # linear programming
+
+    print("starting lp")
+
+    # input data
+
+    objective_coeffs = {
+        row["riskId"]: (row["riskMitigationCost"]) for _, row in summary.iterrows()
+    }
+
+    print(objective_coeffs)
+
+    constraints = [
+        # base constraint: risk variable ≤ impact
+        *[
+            {"vars": {row["riskId"]: 1}, "sense": "<=", "rhs": round(row["impact"])}
+            for _, row in summary.iterrows()
+        ],
+        # impact * variable ≤ cost
+        *[
+            {
+                "vars": {row["riskId"]: row["riskMitigationCost"]},
+                "sense": "<=",
+                "rhs": row["contigencyCost"],
+            }
+            for _, row in summary.iterrows()
+        ],
+        # 3. Sum of (risk * impact) ≤ overall_cost
+        {
+            "vars": {
+                row["riskId"]: row["riskMitigationCost"]
+                for _, row in summary.iterrows()
+            },
+            "sense": "<=",
+            "rhs": total_contigency_cost,
+        },
+    ]
+
+    print(constraints)
+
+    # Step 1: Create the model
+
+    model = LpProblem("dynamic_lp", LpMaximize)
+
+    # Step 2: Dynamically create variables
+    variables = {
+        name: LpVariable(name, lowBound=0, cat="Continuous")
+        for name in objective_coeffs
+    }
+
+    # Step 3: Set the objective
+    model += lpSum(coeff * variables[var] for var, coeff in objective_coeffs.items())
+
+    # Step 4: Add constraints
+    for constraint in constraints:
+        expr = lpSum(
+            coeff * variables[var] for var, coeff in constraint["vars"].items()
+        )
+        if constraint["sense"] == "<=":
+            model += expr <= constraint["rhs"]
+        elif constraint["sense"] == ">=":
+            model += expr >= constraint["rhs"]
+        elif constraint["sense"] == "==":
+            model += expr == constraint["rhs"]
+
+    # Step 5: Solve
+    solver = getSolver("PULP_CBC_CMD")
+    status = model.solve(solver=solver)
+
+    # Step 6: Output results
+    if LpStatus[status] == "Optimal":
+        print("Optimal solution found.")
+        print(f"Objective value: z* = {value(model.objective)}")
+        for name, var in variables.items():
+            print(f"{name}* = {value(var)}")
+    else:
+        print("No optimal solution found.")
+
+        model = pulp.LpProblem("linear_programming", LpMinimize)
+        # get solver
+        solver = getSolver("PULP_CBC_CMD")
+
+    # Step 7: Plot results
+    selected = {
+        var_name: value(var)
+        for var_name, var in variables.items()
+        if value(var) > 0  # only plot selected risks
+    }
+
+    plt.figure(figsize=(8, 4))
+    plt.bar(selected.keys(), selected.values(), color="skyblue")
+    plt.title("Selected Risk Allocations")
+    plt.xlabel("Risk ID")
+    plt.ylabel("Selected Value")
+    plt.grid(True, axis="y", linestyle="--", alpha=0.5)
+    plt.tight_layout()
+
     load_chart(summary)
+    plt.show()
 
 
 def load_chart(summary):
